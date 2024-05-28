@@ -1,0 +1,84 @@
+##################################################################################################
+# review cache service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mycache-review-2
+  labels:
+    app: mycache-review-2
+    service: mycache-review-2
+spec:
+  ports:
+  - port: 11212
+    name: grpc
+  selector:
+    app: mycache-review-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mycache-review-2
+  labels:
+    app: mycache-review-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mycache-review-2
+  template:
+    metadata:
+      labels:
+        app: mycache-review-2
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: mycache-review-2
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["review-2", "cache-2"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11212
+        resources:
+          limits:
+            cpu: 1000m # 1 (virtual if on VM) CPU
+          requests:
+            cpu: 100m # 100 (virtual) millicpus
+        volumeMounts:
+        - name: data-volume
+          mountPath: /var/lib/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: mycache-review-2-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mycache-review-2-pv
+spec:
+  volumeMode: Filesystem
+  capacity:
+    storage: 1Gi # try changing to 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mycache-review-2-storage
+  hostPath:
+    path: /data/volumes/mycache-review-2-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mycache-review-2-pvc
+spec:
+  accessModes:
+    - ReadWriteMany # change to ReadWriteMany if multiple pods using (distributed database)
+  storageClassName: mycache-review-2-storage
+  resources:
+    requests:
+      storage: 1Gi # try changing to 5Gi
+---

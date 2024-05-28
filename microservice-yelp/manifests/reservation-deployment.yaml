@@ -1,0 +1,52 @@
+##################################################################################################
+# Sample service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: reservation
+  labels:
+    app: reservation
+    service: reservation
+spec:
+  ports:
+  - port: 8083
+    name: grpc
+  selector:
+    app: reservation
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restaurant-reservation
+  labels:
+    account: restaurant-reservation
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation
+  labels:
+    app: reservation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reservation
+  template:
+    metadata:
+      labels:
+        app: reservation
+    spec:
+      serviceAccountName: restaurant-reservation
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: reservation
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["reservation"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8083
+

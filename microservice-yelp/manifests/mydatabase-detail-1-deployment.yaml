@@ -1,0 +1,84 @@
+##################################################################################################
+# detail storage service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mydatabase-detail-1
+  labels:
+    app: mydatabase-detail-1
+    service: mydatabase-detail-1
+spec:
+  ports:
+  - port: 27017
+    name: grpc
+  selector:
+    app: mydatabase-detail-1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydatabase-detail-1
+  labels:
+    app: mydatabase-detail-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mydatabase-detail-1
+  template:
+    metadata:
+      labels:
+        app: mydatabase-detail-1
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: mydatabase-detail-1
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["detail-1", "database-1"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 27017
+        resources:
+          limits:
+            cpu: 1000m # 1 (virtual if on VM) CPU
+          requests:
+            cpu: 100m # 100 (virtual) millicpus
+        volumeMounts:
+        - name: data-volume
+          mountPath: /var/lib/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: mydatabase-detail-1-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mydatabase-detail-1-pv
+spec:
+  volumeMode: Filesystem
+  capacity:
+    storage: 1Gi # try changing to 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mydatabase-detail-1-storage
+  hostPath:
+    path: /data/volumes/mydatabase-detail-1-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mydatabase-detail-1-pvc
+spec:
+  accessModes:
+    - ReadWriteMany # change to ReadWriteMany if multiple pods using (distributed database)
+  storageClassName: mydatabase-detail-1-storage
+  resources:
+    requests:
+      storage: 1Gi # try changing to 5Gi
+---

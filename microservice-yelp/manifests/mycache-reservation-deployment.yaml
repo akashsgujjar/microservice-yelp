@@ -1,0 +1,84 @@
+##################################################################################################
+# reservation cache service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mycache-reservation
+  labels:
+    app: mycache-reservation
+    service: mycache-reservation
+spec:
+  ports:
+  - port: 11211
+    name: grpc
+  selector:
+    app: mycache-reservation
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mycache-reservation
+  labels:
+    app: mycache-reservation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mycache-reservation
+  template:
+    metadata:
+      labels:
+        app: mycache-reservation
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: mycache-reservation
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["reservation", "cache"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11211
+        resources:
+          limits:
+            cpu: 1000m # 1 (virtual if on VM) CPU
+          requests:
+            cpu: 100m # 100 (virtual) millicpus
+        volumeMounts:
+        - name: data-volume
+          mountPath: /var/lib/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: mycache-reservation-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mycache-reservation-pv
+spec:
+  volumeMode: Filesystem
+  capacity:
+    storage: 1Gi # try changing to 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mycache-reservation-storage
+  hostPath:
+    path: /data/volumes/mycache-reservation-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mycache-reservation-pvc
+spec:
+  accessModes:
+    - ReadWriteMany # change to ReadWriteMany if multiple pods using (distributed database)
+  storageClassName: mycache-reservation-storage
+  resources:
+    requests:
+      storage: 1Gi # try changing to 5Gi
+---

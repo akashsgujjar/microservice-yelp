@@ -1,0 +1,84 @@
+##################################################################################################
+# detail cache service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mycache-detail-3
+  labels:
+    app: mycache-detail-3
+    service: mycache-detail-3
+spec:
+  ports:
+  - port: 11213
+    name: grpc
+  selector:
+    app: mycache-detail-3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mycache-detail-3
+  labels:
+    app: mycache-detail-3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mycache-detail-3
+  template:
+    metadata:
+      labels:
+        app: mycache-detail-3
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: mycache-detail-3
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["detail-3", "cache-3"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11213
+        resources:
+          limits:
+            cpu: 1000m # 1 (virtual if on VM) CPU
+          requests:
+            cpu: 100m # 100 (virtual) millicpus
+        volumeMounts:
+        - name: data-volume
+          mountPath: /var/lib/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: mycache-detail-3-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mycache-detail-3-pv
+spec:
+  volumeMode: Filesystem
+  capacity:
+    storage: 1Gi # try changing to 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mycache-detail-3-storage
+  hostPath:
+    path: /data/volumes/mycache-detail-3-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mycache-detail-3-pvc
+spec:
+  accessModes:
+    - ReadWriteMany # change to ReadWriteMany if multiple pods using (distributed database)
+  storageClassName: mycache-detail-3-storage
+  resources:
+    requests:
+      storage: 1Gi # try changing to 5Gi
+---

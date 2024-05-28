@@ -1,0 +1,54 @@
+##################################################################################################
+# Sample service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-3
+  labels:
+    app: review-3
+    service: review-3
+spec:
+  ports:
+  - port: 8087
+    name: grpc
+  selector:
+    app: review-3
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restaurant-review-3
+  labels:
+    account: restaurant-review-3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-3
+  labels:
+    app: review-3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-3
+  template:
+    metadata:
+      labels:
+        app: review-3
+    spec:
+      serviceAccountName: restaurant-review-3
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: review-3
+        image: akashvaishuchandni/restaurant_microservice:lab4
+        command: ["/app/restaurant-microservice"]
+        args: ["review-3"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8087
+        resources:
+          limits:
+            cpu: 1000m # 1 (virtual if on VM) CPU
